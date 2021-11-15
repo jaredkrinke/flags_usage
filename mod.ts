@@ -195,6 +195,7 @@ export function processFlags(args: string[], options: FlagProcessingOptions): Ar
     const o = addHelpFlagIfNeeded(options);
 
     // Check for unknown flags
+    // TODO: Optional?
     const unknownFlags: string[] = [];
     o.unknown = (arg, key, value) => (unknownFlags.push(arg), (options.unknown ? options.unknown(arg, key, value) : undefined));
 
