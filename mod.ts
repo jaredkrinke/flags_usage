@@ -8,7 +8,7 @@ export interface FlagProcessingOptions extends ArgParsingOptions {
 export interface FlagInfo {
     flag: string;
     aliases?: string[];
-    type?: "string" | "boolean" | string; // TODO: Something more specific?
+    type?: "string" | "boolean" | string;
     description?: string;
     argumentName?: string;
     default?: unknown;
@@ -108,7 +108,6 @@ function convertToFlagInfos(o: FlagProcessingOptions): FlagInfo[] {
 }
 
 export function formatUsage(options: FlagProcessingOptions): string {
-    // TODO: Check all usages of info properties for null!
     const o = addHelpFlagIfNeeded(options);
     const flagInfos = convertToFlagInfos(o);
 
