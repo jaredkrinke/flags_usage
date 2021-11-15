@@ -5,6 +5,15 @@ export interface ArgProcessingOptions extends ArgParsingOptions {
     argument?: Record<string, string>;
 }
 
+export interface FlagInfo {
+    flag: string;
+    aliases?: string[];
+    type?: "string" | "boolean" | string; // TODO: Something more specific?
+    description?: string;
+    argumentName?: string;
+    default?: unknown;
+}
+
 function addHelpFlagIfNeeded(options: ArgProcessingOptions): ArgProcessingOptions {
     if (options?.description?.help) {
         return options;
@@ -27,9 +36,7 @@ function addHelpFlagIfNeeded(options: ArgProcessingOptions): ArgProcessingOption
     }
 }
 
-export function formatUsage(options: ArgProcessingOptions): string {
-    const o = addHelpFlagIfNeeded(options);
-
+function convertToFlagInfos(o: ArgProcessingOptions): FlagInfo[] {
     // Normalize aliases to arrays
     const flagToAliases: { [flag: string]: string[] } = {};
     if (o.alias) {
@@ -72,8 +79,8 @@ export function formatUsage(options: ArgProcessingOptions): string {
     booleanFlags.forEach(flag => flagArgumentTypes[flag] = "boolean");
     stringFlags.forEach(flag => flagArgumentTypes[flag] = "string");
 
-    // Format flag arguments
-    const flagArgumentStrings: { [flag: string]: string } = {};
+    // Format flag argument names
+    const flagArgumentNames: { [flag: string]: string } = {};
     for (const flag of flagSet) {
         let str: string | undefined = flagArguments[flag];
         if (str === undefined && flagArgumentTypes[flag]) {
@@ -85,36 +92,54 @@ export function formatUsage(options: ArgProcessingOptions): string {
             }
         }
 
-        if (str !== undefined) {
-            flagArgumentStrings[flag] = str;
+        if (str) {
+            flagArgumentNames[flag] = str;
         }
     }
 
+    return Array.from(flagSet).map(flag => ({
+        flag,
+        aliases: flagToAliases[flag],
+        type: flagArgumentTypes[flag],
+        description: descriptions[flag],
+        argumentName: flagArgumentNames[flag],
+        default: defaults[flag],
+    }));
+}
+
+export function formatUsage(options: ArgProcessingOptions): string {
+    // TODO: Check all usages of info properites for null!
+    const o = addHelpFlagIfNeeded(options);
+    const flagInfos = convertToFlagInfos(o);
+
     // Format defaults
     const flagDefaultStrings: { [flag: string]: string } = {};
-    Object.keys(defaults).forEach(flag => {
-        const value = defaults[flag];
-        let str: string;
+    flagInfos.forEach(info => {
+        const value = info.default;
+        let str: string | undefined;
         switch (typeof(value)) {
             case "string": str = `"${value}"`; break;
             case "number": str = `${value}`; break;
             case "boolean": str = `${value}`; break;
+            case "undefined": break;
             default: str = typeof(value); break;
         }
-        flagDefaultStrings[flag] = str;
+        if (str) {
+            flagDefaultStrings[info.flag] = str;
+        }
     });
 
     // Create a display string for each flag
-    const flagStrings = Array.from(flagSet)
-        .map(flag => ({
-            descriptionString: descriptions[flag]
-                ? `${descriptions[flag]}${flagDefaultStrings[flag] ? ` (default: ${flagDefaultStrings[flag]})` : ""}`
-                : (flagDefaultStrings[flag] ? `Default: ${flagDefaultStrings[flag]}` : ""),
+    const flagStrings = flagInfos
+        .map(info => ({
+            descriptionString: info.description
+                ? `${info.description}${flagDefaultStrings[info.flag] ? ` (default: ${flagDefaultStrings[info.flag]})` : ""}`
+                : (flagDefaultStrings[info.flag] ? `Default: ${flagDefaultStrings[info.flag]}` : ""),
 
-            flagString: [flag, ...(flagToAliases[flag] ?? [])]
+            flagString: [info.flag, ...(info.aliases ?? [])]
                 .sort((a, b) => a.length - b.length)
                 .map(f => `-${f.length > 1 ? "-" : ""}${f}`)
-                .join(", ") + (flagArgumentStrings[flag] ? ` <${flagArgumentStrings[flag]}>` : ""),
+                .join(", ") + (info.argumentName ? ` <${info.argumentName}>` : ""),
         }));
 
     const flagStringMaxLength = flagStrings.reduce<number>((max, str) => Math.max(max, str.flagString.length), 0);
@@ -130,18 +155,18 @@ export function logUsage(options: ArgProcessingOptions): void {
     console.log(formatUsage(options));
 }
 
-export function parseArgs(args: string[], options: ArgProcessingOptions): Args {
+export function parseFlags(args: string[], options: ArgProcessingOptions): Args {
     return parse(args, addHelpFlagIfNeeded(options));
 }
 
-export function processArgs(args: string[], options: ArgProcessingOptions): Args {
+export function processFlags(args: string[], options: ArgProcessingOptions): Args {
     const o = addHelpFlagIfNeeded(options);
 
     // Check for unknown flags
     const unknownFlags: string[] = [];
     o.unknown = (arg, key, value) => (unknownFlags.push(arg), (options.unknown ? options.unknown(arg, key, value) : undefined));
 
-    const parsedArgs = parseArgs(args, o);
+    const parsedArgs = parseFlags(args, o);
 
     const hasUnknownFlags = unknownFlags.length > 0;
     if (parsedArgs.help || hasUnknownFlags) {

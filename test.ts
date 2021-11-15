@@ -1,6 +1,6 @@
-import { processArgs } from "./mod.ts";
+import { processFlags } from "./mod.ts";
 
-const result = processArgs(Deno.args, {
+const result = processFlags(Deno.args, {
     description: {
         clean: "Clean output directory before processing",
         drafts: "Include drafts in output",
