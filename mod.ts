@@ -1,17 +1,19 @@
 import { Args, ArgParsingOptions, parse } from "https://deno.land/std@0.114.0/flags/mod.ts";
 
 export interface FlagProcessingOptions extends ArgParsingOptions {
+    /** An object mapping flags to descriptions that will be displayed on `--help` */
     description?: Record<string, string>;
+
+    /** An object mapping flags to names for their arguments to be displayed on `--help` (e.g. mapping `out` to `path` will display `--out <path> ...` instead of the generic `--out <str>` for string arguments) */
     argument?: Record<string, string>;
 }
 
-export interface FlagInfo {
+interface FlagInfo {
     flag: string;
+    default: boolean | string | number | unknown;
     aliases?: string[];
-    type?: "string" | "boolean" | string;
     description?: string;
     argumentName?: string;
-    default?: unknown;
 }
 
 function addHelpFlagIfNeeded(options: FlagProcessingOptions): FlagProcessingOptions {
@@ -97,16 +99,26 @@ function convertToFlagInfos(o: FlagProcessingOptions): FlagInfo[] {
         }
     }
 
-    return Array.from(flagSet).map(flag => ({
-        flag,
-        aliases: flagToAliases[flag],
-        type: flagArgumentTypes[flag],
-        description: descriptions[flag],
-        argumentName: flagArgumentNames[flag],
-        default: defaults[flag],
-    }));
+    return Array.from(flagSet).map(flag => {
+        const info: FlagInfo = {
+            flag,
+            aliases: flagToAliases[flag],
+            description: descriptions[flag],
+            argumentName: flagArgumentNames[flag],
+            default: defaults[flag],
+        };
+        return info;
+    });
 }
 
+/** Format flag processing options as a string, e.g.:
+ * 
+ * ```
+ * Options:
+ *   -c, --clean         Clean output directory before processing
+ *   -o, --output <dir>  Output directory (default: "out")
+ * ```
+ */
 export function formatUsage(options: FlagProcessingOptions): string {
     const o = addHelpFlagIfNeeded(options);
     const flagInfos = convertToFlagInfos(o);
@@ -150,14 +162,35 @@ export function formatUsage(options: FlagProcessingOptions): string {
     }`;
 }
 
-export function logUsage(options: FlagProcessingOptions): void {
+/** Format flag processing options as a string and write it to the `console.log`.
+ * 
+ * ```
+ * Options:
+ *   -c, --clean         Clean output directory before processing
+ *   -o, --output <dir>  Output directory (default: "out")
+ * ```
+ */
+ export function logUsage(options: FlagProcessingOptions): void {
     console.log(formatUsage(options));
 }
 
+/** Parse command line flags using the supplied options, along with an additional `--help` flag (aliased to `-h` and `-?`). */
 export function parseFlags(args: string[], options: FlagProcessingOptions): Args {
     return parse(args, addHelpFlagIfNeeded(options));
 }
 
+/** Process command line flags using the supplied options, along with an additional `--help` flag (aliased to `-h` and `-?`).
+ * 
+ * This will automatically print out usage information and exit if either unknown flags are encountered or `--help` (or `-h`, `-?`) was requested.
+ * 
+ * Example usage information:
+ * 
+ * ```
+ * Options:
+ *   -c, --clean         Clean output directory before processing
+ *   -o, --output <dir>  Output directory (default: "out")
+ * ```
+ */
 export function processFlags(args: string[], options: FlagProcessingOptions): Args {
     const o = addHelpFlagIfNeeded(options);
 
