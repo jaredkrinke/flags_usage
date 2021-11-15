@@ -108,7 +108,7 @@ function convertToFlagInfos(o: FlagProcessingOptions): FlagInfo[] {
 }
 
 export function formatUsage(options: FlagProcessingOptions): string {
-    // TODO: Check all usages of info properites for null!
+    // TODO: Check all usages of info properties for null!
     const o = addHelpFlagIfNeeded(options);
     const flagInfos = convertToFlagInfos(o);
 
