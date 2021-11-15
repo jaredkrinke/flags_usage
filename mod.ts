@@ -1,6 +1,6 @@
 import { Args, ArgParsingOptions, parse } from "https://deno.land/std@0.114.0/flags/mod.ts";
 
-export interface ArgProcessingOptions extends ArgParsingOptions {
+export interface FlagProcessingOptions extends ArgParsingOptions {
     description?: Record<string, string>;
     argument?: Record<string, string>;
 }
@@ -14,7 +14,7 @@ export interface FlagInfo {
     default?: unknown;
 }
 
-function addHelpFlagIfNeeded(options: ArgProcessingOptions): ArgProcessingOptions {
+function addHelpFlagIfNeeded(options: FlagProcessingOptions): FlagProcessingOptions {
     if (options?.description?.help) {
         return options;
     }
@@ -36,7 +36,7 @@ function addHelpFlagIfNeeded(options: ArgProcessingOptions): ArgProcessingOption
     }
 }
 
-function convertToFlagInfos(o: ArgProcessingOptions): FlagInfo[] {
+function convertToFlagInfos(o: FlagProcessingOptions): FlagInfo[] {
     // Normalize aliases to arrays
     const flagToAliases: { [flag: string]: string[] } = {};
     if (o.alias) {
@@ -107,7 +107,7 @@ function convertToFlagInfos(o: ArgProcessingOptions): FlagInfo[] {
     }));
 }
 
-export function formatUsage(options: ArgProcessingOptions): string {
+export function formatUsage(options: FlagProcessingOptions): string {
     // TODO: Check all usages of info properites for null!
     const o = addHelpFlagIfNeeded(options);
     const flagInfos = convertToFlagInfos(o);
@@ -151,15 +151,15 @@ export function formatUsage(options: ArgProcessingOptions): string {
     }`;
 }
 
-export function logUsage(options: ArgProcessingOptions): void {
+export function logUsage(options: FlagProcessingOptions): void {
     console.log(formatUsage(options));
 }
 
-export function parseFlags(args: string[], options: ArgProcessingOptions): Args {
+export function parseFlags(args: string[], options: FlagProcessingOptions): Args {
     return parse(args, addHelpFlagIfNeeded(options));
 }
 
-export function processFlags(args: string[], options: ArgProcessingOptions): Args {
+export function processFlags(args: string[], options: FlagProcessingOptions): Args {
     const o = addHelpFlagIfNeeded(options);
 
     // Check for unknown flags
