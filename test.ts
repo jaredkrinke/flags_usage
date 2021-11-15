@@ -30,9 +30,15 @@ const result = processArgs(Deno.args, {
         watch: "w",
         noDescription: "x",
     },
+    argument: {
+        // input: "dir",
+        output: "dir",
+        par: "param",
+    },
     default: {
         input: "content",
         output: "out",
+        clean: true,
     },
 });
 

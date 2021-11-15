@@ -1,8 +1,8 @@
 import { Args, ArgParsingOptions, parse } from "https://deno.land/std@0.114.0/flags/mod.ts";
 
-// TODO: Parameter names
 export interface ArgProcessingOptions extends ArgParsingOptions {
     description?: Record<string, string>;
+    argument?: Record<string, string>;
 }
 
 function addHelpFlagIfNeeded(options: ArgProcessingOptions): ArgProcessingOptions {
@@ -40,56 +40,88 @@ export function formatUsage(options: ArgProcessingOptions): string {
     }
 
     // Enumerate all flags
-    const flagSet: { [name: string]: boolean } = {};
-    const descriptions = o.description ?? {};
+    const flagSet = new Set<string>();
     const defaults = o.default ?? {};
+    const descriptions = o.description ?? {};
+    const flagArguments = o.argument ?? {};
     const booleanFlags: string[] = Array.isArray(o.boolean) ? o.boolean : ((typeof(o.boolean) === "string") ? [o.boolean] : []);
     const stringFlags: string[] = Array.isArray(o.string) ? o.string : ((typeof(o.string) === "string") ? [o.string] : []);
-    Object.keys(descriptions).forEach(flag => flagSet[flag] = true);
-    Object.keys(defaults).forEach(flag => flagSet[flag] = true);
-    booleanFlags.forEach(flag => flagSet[flag] = true);
-    stringFlags.forEach(flag => flagSet[flag] = true);
+
+    // Order flags: as in the description array, then Booleans, strings, flags with arguments, flags with defaults, and finally --help
+    Object.keys(descriptions).forEach(flag => flagSet.add(flag));
+    booleanFlags.forEach(flag => flagSet.add(flag));
+    stringFlags.forEach(flag => flagSet.add(flag));
+    Object.keys(flagArguments).forEach(flag => flagSet.add(flag));
+    Object.keys(defaults).forEach(flag => flagSet.add(flag));
+
+    // Put --help last
+    flagSet.delete("help");
+    flagSet.add("help");
 
     // Remove any aliases
     for (const key of Object.keys(flagToAliases)) {
         const aliases = flagToAliases[key];
         aliases.forEach(flag => {
-            delete flagSet[flag];
+            flagSet.delete(flag);
         });
     }
 
+    // Determine flag argument types
+    const flagArgumentTypes: { [flag: string]: string } = {};
+    Object.keys(defaults).forEach(flag => flagArgumentTypes[flag] = typeof(defaults[flag]));
+    booleanFlags.forEach(flag => flagArgumentTypes[flag] = "boolean");
+    stringFlags.forEach(flag => flagArgumentTypes[flag] = "string");
+
+    // Format flag arguments
+    const flagArgumentStrings: { [flag: string]: string } = {};
+    for (const flag of flagSet) {
+        let str: string | undefined = flagArguments[flag];
+        if (str === undefined && flagArgumentTypes[flag]) {
+            switch (flagArgumentTypes[flag]) {
+                case "string": str = "str"; break;
+                case "number": str = "num"; break;
+                case "boolean": break;
+                default: str = "arg"; break;
+            }
+        }
+
+        if (str !== undefined) {
+            flagArgumentStrings[flag] = str;
+        }
+    }
+
     // Format defaults
-    const defaultStrings: { [flag: string]: string } = {};
+    const flagDefaultStrings: { [flag: string]: string } = {};
     Object.keys(defaults).forEach(flag => {
         const value = defaults[flag];
         let str: string;
         switch (typeof(value)) {
-            case "string": str = value; break;
-            case "number": str = "" + value; break;
-            case "boolean": str = "" + value; break;
+            case "string": str = `"${value}"`; break;
+            case "number": str = `${value}`; break;
+            case "boolean": str = `${value}`; break;
             default: str = typeof(value); break;
         }
-        defaultStrings[flag] = str;
+        flagDefaultStrings[flag] = str;
     });
 
     // Create a display string for each flag
-    const flagStrings = Object.keys(flagSet)
-    .map(flag => ({
-        description: descriptions[flag] ?? "",
-        default: defaultStrings[flag] ?? "",
-        flagString: [flag, ...(flagToAliases[flag] ?? [])]
-            .sort((a, b) => a.length - b.length)
-            .map(f => `-${f.length > 1 ? "-" : ""}${f}`)
-            .join(", "),
-    }));
+    const flagStrings = Array.from(flagSet)
+        .map(flag => ({
+            descriptionString: descriptions[flag]
+                ? `${descriptions[flag]}${flagDefaultStrings[flag] ? ` (default: ${flagDefaultStrings[flag]})` : ""}`
+                : (flagDefaultStrings[flag] ? `Default: ${flagDefaultStrings[flag]}` : ""),
+
+            flagString: [flag, ...(flagToAliases[flag] ?? [])]
+                .sort((a, b) => a.length - b.length)
+                .map(f => `-${f.length > 1 ? "-" : ""}${f}`)
+                .join(", ") + (flagArgumentStrings[flag] ? ` <${flagArgumentStrings[flag]}>` : ""),
+        }));
 
     const flagStringMaxLength = flagStrings.reduce<number>((max, str) => Math.max(max, str.flagString.length), 0);
 
-    // TODO: Anything reasonable to print for the program name? Without too many dependencies?
-    // TODO: parameters
     return`Options:\n${
         flagStrings
-            .map(f => `  ${f.flagString}${" ".repeat(flagStringMaxLength - f.flagString.length)}  ${f.description}${f.default ? ` (default: "${f.default}")` : ""}`)
+            .map(f => `  ${f.flagString}${" ".repeat(flagStringMaxLength - f.flagString.length)}  ${f.descriptionString}`)
             .join("\n")
     }`;
 }
