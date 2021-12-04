@@ -6,12 +6,32 @@ Deno.test({
     fn: () => {
         assertEquals(
             formatUsage({
-                description: { output: "Output directory" }, // New: Description of flag
-                argument: { output: "dir" },                 // New: "<dir>" in the output below
+                description: { output: "Output directory" },
+                argument: { output: "dir" },
                 string: [ "output" ],
                 default: { output: "out" },
             }),
 `Options:
+  --output <dir>  Output directory (default: "out")
+  -h, -?, --help  Display usage information`
+        );
+    },
+});
+
+Deno.test({
+    name: "Example with preamble",
+    fn: () => {
+        assertEquals(
+            formatUsage({
+                preamble: "Usage: my-tool <options>",
+                description: { output: "Output directory" },
+                argument: { output: "dir" },
+                string: [ "output" ],
+                default: { output: "out" },
+            }),
+`Usage: my-tool <options>
+
+Options:
   --output <dir>  Output directory (default: "out")
   -h, -?, --help  Display usage information`
         );

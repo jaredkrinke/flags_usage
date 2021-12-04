@@ -1,6 +1,9 @@
 import { Args, ArgParsingOptions, parse } from "https://deno.land/std@0.114.0/flags/mod.ts";
 
 export interface FlagProcessingOptions extends ArgParsingOptions {
+    /** String to print prior to listing flags on `--help` */
+    preamble?: string;
+
     /** An object mapping flags to descriptions that will be displayed on `--help` */
     description?: Record<string, string>;
 
@@ -155,7 +158,7 @@ export function formatUsage(options: FlagProcessingOptions): string {
 
     const flagStringMaxLength = flagStrings.reduce<number>((max, str) => Math.max(max, str.flagString.length), 0);
 
-    return`Options:\n${
+    return `${options.preamble ? `${options.preamble}\n\n` : ""}Options:\n${
         flagStrings
             .map(f => `  ${f.flagString}${" ".repeat(flagStringMaxLength - f.flagString.length)}  ${f.descriptionString}`)
             .join("\n")

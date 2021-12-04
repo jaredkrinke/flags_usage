@@ -7,6 +7,7 @@ main.ts:
 import { processFlags } from "https://deno.land/x/flags_usage/mod.ts";
 
 const options = {
+    preamble: "Usage: my-tool <options>",        // New: Optional preamble for describing non-flag/positional arguments
     description: { output: "Output directory" }, // New: Description of flag
     argument: { output: "dir" },                 // New: "<dir>" in the output below
     string: [ "output" ],
@@ -20,6 +21,8 @@ const { output } = processFlags(Deno.args, options);
 Output:
 ```
 $ deno run main.ts --help
+Usage: my-tool <options>
+
 Options:
   --output <dir>  Output directory (default: "out")
   -h, -?, --help  Display usage information
@@ -31,6 +34,7 @@ Note that `parseFlags`, `logUsage`, etc. (see API) can be used if automatically 
 ## Options
 All `options` arguments follow std/flags's interface, with the following new, *optional* properties:
 
+* `preamble`: An optional string to print out before flag information on `--help`
 * `description`: An object mapping flags to descriptions that will be displayed on `--help`
 * `argument`: An object mapping flags to names for their arguments to be displayed on `--help` (e.g. mapping `out` to `path` will display `--out <path> ...` instead of the generic `--out <str>` for string arguments)
 
