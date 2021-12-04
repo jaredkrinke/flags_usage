@@ -1,4 +1,4 @@
-import { Args, ArgParsingOptions, parse } from "https://deno.land/std@0.114.0/flags/mod.ts";
+import { Args, ArgParsingOptions, parse } from "https://deno.land/std@0.115.1/flags/mod.ts";
 
 export interface FlagProcessingOptions extends ArgParsingOptions {
     /** String to print prior to listing flags on `--help` */
