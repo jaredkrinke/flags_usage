@@ -198,17 +198,23 @@ export function processFlags(args: string[], options: FlagProcessingOptions): Ar
     const o = addHelpFlagIfNeeded(options);
 
     // Check for unknown flags
-    // TODO: Optional?
-    const unknownFlags: string[] = [];
-    o.unknown = (arg, key, value) => (unknownFlags.push(arg), (options.unknown ? options.unknown(arg, key, value) : undefined));
+    const unknownFlags = new Set<string>();
+    o.unknown = (arg, key, value) => {
+        let fallback: boolean | undefined;
+        if (arg.startsWith("-")) {
+            unknownFlags.add(arg);
+            fallback  = false;
+        }
+        return options.unknown ? options.unknown(arg, key, value) : fallback;
+    };
 
     const parsedArgs = parseFlags(args, o);
 
-    const hasUnknownFlags = unknownFlags.length > 0;
+    const hasUnknownFlags = unknownFlags.size > 0;
     if (parsedArgs.help || hasUnknownFlags) {
         // Print help and exit
         if (hasUnknownFlags) {
-            console.log(`Unknown arguments: ${unknownFlags.join(" ")}\n`);
+            console.log(`Unknown arguments: ${Array.from(unknownFlags).join(" ")}\n`);
         }
 
         logUsage(o);
